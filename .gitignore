@@ -3,40 +3,62 @@
 .env.local
 .env.production
 
-# API密钥相关
-*api_key*
-*apikey*
-*secret*
-*token*
-
-# 日志文件
-*.log
-logs/
-
-# 缓存文件
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+*.py[cod]
+*$py.class
 *.so
-
-# 临时文件
-*.tmp
-*.temp
-.DS_Store
-Thumbs.db
-
-# IDE文件
-.vscode/
-.idea/
-*.swp
-*.swo
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
 # 虚拟环境
 venv/
 env/
 ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 日志文件
+*.log
+
+# 临时文件
+*.tmp
+*.temp
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# Vercel
+.vercel
+
+# 缓存
+cache/
+*.cache
+
+# API密钥相关
+*api_key*
+*apikey*
+*secret*
+*token*
 
 # 数据文件（如果包含敏感信息）
 *.json

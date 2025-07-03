@@ -1,52 +1,40 @@
-# Vercel部署指南
+# 🚀 Vercel部署指南
 
 ## 部署步骤
 
-### 1. 安装Vercel CLI
-```bash
-npm install -g vercel
+### 1. 注册Vercel账号
+- 访问：https://vercel.com/signup
+- 使用GitHub账号登录
+
+### 2. 连接GitHub仓库
+- 在Vercel控制台点击"New Project"
+- 选择您的GitHub仓库
+- 选择"chatbot第一版"文件夹
+
+### 3. 配置环境变量
+在Vercel项目设置中添加以下环境变量：
+
+```
+OPENAI_API_KEY=your_actual_openai_api_key_here
+FLASK_ENV=production
+FLASK_DEBUG=false
 ```
 
-### 2. 登录Vercel
-```bash
-vercel login
-```
+**⚠️ 重要安全提醒：**
+- 不要将真实的API密钥写在代码中
+- 只在Vercel控制台的环境变量中设置
+- 确保.gitignore文件已正确配置
 
-### 3. 在项目根目录部署
-```bash
-cd chatbot第一版
-vercel
-```
+### 4. 部署设置
+- Framework Preset: Other
+- Build Command: 留空
+- Output Directory: 留空
+- Install Command: `pip install -r requirements.txt`
 
-### 4. 设置环境变量
-在Vercel控制台中设置以下环境变量：
-- `OPENAI_API_KEY`: 您的OpenAI API密钥
-
-### 5. 重新部署
-```bash
-vercel --prod
-```
-
-## 项目结构
-```
-chatbot第一版/
-├── api/
-│   └── index.py          # Vercel入口文件
-├── chatbot_web.py        # 主Flask应用
-├── requirements.txt      # Python依赖
-├── vercel.json          # Vercel配置
-└── ...
-```
-
-## 注意事项
-- 确保所有依赖都在requirements.txt中
-- 环境变量必须在Vercel控制台中设置
-- 首次部署可能需要几分钟时间
-- 如果遇到超时问题，可以调整vercel.json中的maxDuration
-
-## 访问地址
-部署成功后，您将获得一个类似以下的URL：
-`https://your-project-name.vercel.app`
+### 5. 部署
+- 点击"Deploy"
+- 等待部署完成
+- 获得公网访问链接
 
 ## 安全特性
 - ✅ 自动HTTPS

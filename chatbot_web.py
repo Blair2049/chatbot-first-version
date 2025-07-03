@@ -8,8 +8,8 @@ import asyncio
 import tiktoken
 from lightrag import QueryParam
 
-# 添加 LightRAG 路径（Vercel环境中不需要，因为lightrag已经通过pip安装）
-# sys.path.append('/Users/blairzhang/Desktop/MyProject/LightRAG-main/LightRAG')
+# 添加 LightRAG 路径
+sys.path.append('/Users/blairzhang/Desktop/MyProject/LightRAG-main/LightRAG')
 
 from lightrag import LightRAG
 from lightrag.llm import openai_complete_if_cache, openai_embedding
@@ -51,9 +51,19 @@ def initialize_rag():
     """初始化 LightRAG"""
     global rag, token_encoder
     
-    # 从环境变量获取 API Key（Vercel会自动设置）
-    if not os.getenv("OPENAI_API_KEY"):
-        raise ValueError("OPENAI_API_KEY environment variable is not set. Please set it in Vercel dashboard.")
+    # 从环境变量获取 API Key
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        # 尝试从.env文件读取（本地开发）
+        try:
+            from dotenv import load_dotenv
+            load_dotenv()
+            api_key = os.getenv("OPENAI_API_KEY")
+        except ImportError:
+            pass
+        
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is not set. Please set it in your environment or .env file.")
     
     # 初始化 token 编码器
     token_encoder = tiktoken.encoding_for_model("gpt-4o-mini")
