@@ -1,0 +1,5 @@
+lightrag
+openai
+numpy
+nest-asyncio
+asyncio 

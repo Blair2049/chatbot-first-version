@@ -1,0 +1,48 @@
+# 环境变量文件
+.env
+.env.local
+.env.production
+
+# API密钥相关
+*api_key*
+*apikey*
+*secret*
+*token*
+
+# 日志文件
+*.log
+logs/
+
+# 缓存文件
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# 临时文件
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 虚拟环境
+venv/
+env/
+ENV/
+
+# 数据文件（如果包含敏感信息）
+*.json
+*.db
+*.sqlite
+
+# 但保留项目必需的数据文件
+!stakeholder_management_rag_sync/*.json
+!stakeholder_management_rag_sync/*.graphml 
