@@ -1,5 +1,5 @@
-flask==2.3.3
-numpy>=1.21.0,<1.25.0
+flask==3.0.0
+numpy==1.26.0
 tiktoken==0.5.1
 openai==1.3.0
 networkx==3.1
@@ -7,7 +7,8 @@ scikit-learn==1.3.0
 pandas==2.0.3
 requests==2.31.0
 python-dotenv==1.0.0
-setuptools>=65.0.0
 asyncio
 nest-asyncio
-lightrag 
+nano-vectordb
+graspologic
+git+https://github.com/HKUDS/LightRAG.git 
