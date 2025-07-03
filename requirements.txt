@@ -6,4 +6,10 @@ asyncio
 flask
 flask-cors
 requests
-python-dotenv 
+python-dotenv
+langdetect
+tiktoken
+networkx
+matplotlib
+scikit-learn
+pandas 

@@ -1,13 +1,12 @@
 """
-Vercel部署入口文件
+备用Vercel入口文件
 """
 import os
 import sys
 from pathlib import Path
 
-# 添加项目根目录到Python路径
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+# 添加当前目录到Python路径
+sys.path.insert(0, str(Path(__file__).parent))
 
 # 导入Flask应用
 from chatbot_web import app
@@ -16,5 +15,4 @@ from chatbot_web import app
 app.debug = False
 
 # Vercel需要这个变量来识别Flask应用
-# 这是Vercel Python运行时要求的格式
 handler = app 

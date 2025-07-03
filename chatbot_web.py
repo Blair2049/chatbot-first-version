@@ -8,8 +8,8 @@ import asyncio
 import tiktoken
 from lightrag import QueryParam
 
-# 添加 LightRAG 路径
-sys.path.append('/Users/blairzhang/Desktop/MyProject/LightRAG-main/LightRAG')
+# 添加 LightRAG 路径（Vercel环境中不需要，因为lightrag已经通过pip安装）
+# sys.path.append('/Users/blairzhang/Desktop/MyProject/LightRAG-main/LightRAG')
 
 from lightrag import LightRAG
 from lightrag.llm import openai_complete_if_cache, openai_embedding
