@@ -1,32 +1,18 @@
 """
-Vercel Serverless Function - 完整的聊天机器人API
+Vercel Serverless Function - 简化版聊天机器人API
+使用OpenAI直接调用，不依赖LightRAG
 """
 import os
 import sys
 import json
 from datetime import datetime
-import numpy as np
-import asyncio
 import tiktoken
 from flask import Flask, render_template, request, jsonify
-
-# 添加项目根目录到Python路径
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-
-# 尝试导入LightRAG（如果可用）
-try:
-    from lightrag import QueryParam, LightRAG
-    from lightrag.llm import openai_complete_if_cache, openai_embedding
-    from lightrag.utils import EmbeddingFunc
-    LIGHTRAG_AVAILABLE = True
-except ImportError:
-    LIGHTRAG_AVAILABLE = False
-    print("⚠️ LightRAG不可用，将使用简化模式")
+import openai
 
 app = Flask(__name__)
 
 # 全局变量
-rag = None
 token_encoder = None
 cost_stats = {
     "total_input_tokens": 0,
@@ -47,66 +33,23 @@ COST_CONFIG = {
     }
 }
 
-def initialize_rag():
-    """初始化 LightRAG"""
-    global rag, token_encoder
-    
-    if not LIGHTRAG_AVAILABLE:
-        print("❌ LightRAG不可用，跳过初始化")
-        return
-    
-    # 从环境变量获取 API Key
+def initialize_openai():
+    """初始化OpenAI客户端"""
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise ValueError("OPENAI_API_KEY environment variable is not set.")
     
+    openai.api_key = api_key
+    return openai
+
+def initialize_tokenizer():
+    """初始化token编码器"""
+    global token_encoder
     try:
-        # 初始化 token 编码器
         token_encoder = tiktoken.encoding_for_model("gpt-4o-mini")
-        
-        # 定义LLM和embedding函数
-        async def llm_model_func(
-            prompt, system_prompt=None, history_messages=[], keyword_extraction=False, **kwargs
-        ) -> str:
-            return await openai_complete_if_cache(
-                "gpt-4o-mini",
-                prompt,
-                system_prompt=system_prompt,
-                history_messages=history_messages,
-                api_key=api_key,
-                **kwargs
-            )
-
-        async def embedding_func(texts: list[str]) -> np.ndarray:
-            return await openai_embedding(
-                texts,
-                model="text-embedding-ada-002",
-                api_key=api_key
-            )
-
-        # 初始化LightRAG
-        rag = LightRAG(
-            working_dir="./stakeholder_management_rag_sync",
-            llm_model_func=llm_model_func,
-            embedding_func=EmbeddingFunc(
-                embedding_dim=1536,
-                max_token_size=8192,
-                func=embedding_func,
-            ),
-            addon_params={
-                "insert_batch_size": 4,
-                "language": "Simplified Chinese",
-                "entity_types": ["organization", "person", "geo", "event", "project"],
-                "example_number": 3
-            },
-            enable_llm_cache=True,
-            enable_llm_cache_for_entity_extract=True
-        )
-        
-        print("✅ LightRAG 初始化完成")
     except Exception as e:
-        print(f"❌ LightRAG 初始化失败: {e}")
-        rag = None
+        print(f"⚠️ Token编码器初始化失败: {e}")
+        token_encoder = None
 
 def detect_language(text):
     """简单的中英文检测"""
@@ -116,27 +59,27 @@ def detect_language(text):
 def generate_system_prompt(question, language='english'):
     """生成智能系统提示词"""
     if language == 'chinese':
-        return f"""你是一个专业的利益相关者管理顾问。基于提供的文档信息，请诚实、准确地回答用户问题。
+        return f"""你是一个专业的利益相关者管理顾问。请基于你的专业知识回答用户问题。
 
 回答要求：
-1. 只基于文档中的信息回答，如果信息不足，请明确说明
-2. 提供结构化的回答，使用要点和子要点
-3. 如果涉及数据或事实，请引用具体来源
-4. 对于评估类问题，如果文档中没有足够的主观评价信息，请说明信息不足
-5. 保持专业、客观的语气
+1. 提供专业、准确的建议
+2. 使用结构化的回答格式，包含要点和子要点
+3. 如果信息不足，请诚实说明
+4. 保持专业、客观的语气
+5. 提供实用的建议和指导
 
 用户问题：{question}
 
 请基于以上要求回答："""
     else:
-        return f"""You are a professional stakeholder management consultant. Based on the provided document information, please answer user questions honestly and accurately.
+        return f"""You are a professional stakeholder management consultant. Please answer user questions based on your expertise.
 
 Answer requirements:
-1. Only answer based on information in the documents, if information is insufficient, clearly state this
-2. Provide structured answers using bullet points and sub-points
-3. If involving data or facts, cite specific sources
-4. For evaluation questions, if documents lack sufficient subjective evaluation information, state insufficient information
-5. Maintain professional and objective tone
+1. Provide professional and accurate advice
+2. Use structured answer format with bullet points and sub-points
+3. If information is insufficient, state honestly
+4. Maintain professional and objective tone
+5. Provide practical recommendations and guidance
 
 User question: {question}
 
@@ -246,64 +189,37 @@ def score_response(query, response, mode):
     
     return scores
 
-def query_with_best_mode(question, language):
-    """自动选择最佳模式的查询功能"""
-    if not rag:
-        return {"response": "系统初始化失败，请稍后重试", "mode": "error"}
-    
-    modes = ["naive", "local", "global", "hybrid", "mix"]
-    best_result = None
-    best_score = 0
-    
-    for mode in modes:
-        try:
-            response = rag.query(question, param=QueryParam(mode=mode, top_k=10))
-            score_info = score_response(question, response, mode)
-            
-            if score_info["total_score"] > best_score:
-                best_score = score_info["total_score"]
-                best_result = {
-                    "response": response,
-                    "mode": mode,
-                    "score": score_info
-                }
-        except Exception as e:
-            print(f"Mode {mode} failed: {e}")
-            continue
-    
-    if not best_result:
-        best_result = {
-            "response": "抱歉，所有查询模式都失败了，请稍后重试",
-            "mode": "error"
-        }
-    
-    return best_result
-
-def single_mode_query(question, mode, language):
-    """单一模式查询"""
-    if not rag:
-        return {"response": "系统初始化失败，请稍后重试", "mode": "error"}
-    
+def query_openai(question, language):
+    """使用OpenAI API查询"""
     try:
-        response = rag.query(question, param=QueryParam(mode=mode, top_k=10))
-        score_info = score_response(question, response, mode)
+        # 初始化OpenAI
+        client = initialize_openai()
         
-        return {
-            "response": response,
-            "mode": mode,
-            "score": score_info
-        }
+        # 生成系统提示词
+        system_prompt = generate_system_prompt(question, language)
+        
+        # 调用OpenAI API
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": question}
+            ],
+            max_tokens=1000,
+            temperature=0.7
+        )
+        
+        return response.choices[0].message.content
+        
     except Exception as e:
-        return {
-            "response": f"查询失败: {str(e)}",
-            "mode": mode
-        }
+        return f"抱歉，查询失败: {str(e)}"
 
-# 初始化RAG（在模块加载时执行）
+# 初始化
 try:
-    initialize_rag()
+    initialize_tokenizer()
+    print("✅ Token编码器初始化完成")
 except Exception as e:
-    print(f"❌ 初始化失败: {e}")
+    print(f"❌ Token编码器初始化失败: {e}")
 
 # 路由定义
 @app.route('/')
@@ -328,19 +244,16 @@ def chat():
         # 检测语言
         language = detect_language(question)
         
-        # 生成系统提示词
-        system_prompt = generate_system_prompt(question, language)
-        
         # 查询处理
-        if mode == 'best':
-            result = query_with_best_mode(question, language)
-        else:
-            result = single_mode_query(question, mode, language)
+        response = query_openai(question, language)
         
         # 计算token和成本
         input_tokens = calculate_tokens(question)
-        output_tokens = calculate_tokens(result['response'])
+        output_tokens = calculate_tokens(response)
         cost_info = calculate_cost(input_tokens, output_tokens)
+        
+        # 评分
+        score_info = score_response(question, response, mode)
         
         # 更新统计
         cost_stats["total_input_tokens"] += input_tokens
@@ -350,16 +263,16 @@ def chat():
         # 添加到历史记录
         query_history.append({
             "question": question,
-            "response": result['response'],
-            "mode": result.get('mode', 'unknown'),
+            "response": response,
+            "mode": mode,
             "timestamp": datetime.now().isoformat()
         })
         
         return jsonify({
             'success': True,
-            'response': result['response'],
-            'mode_used': result.get('mode', 'unknown'),
-            'score': result.get('score', {}),
+            'response': response,
+            'mode_used': mode,
+            'score': score_info,
             'cost': cost_info,
             'tokens': {
                 'input_tokens': input_tokens,
@@ -383,10 +296,9 @@ def health():
     """健康检查接口"""
     return jsonify({
         'status': 'healthy',
-        'rag_initialized': rag is not None,
-        'lightrag_available': LIGHTRAG_AVAILABLE,
         'api_key_set': bool(os.getenv("OPENAI_API_KEY")),
-        'environment': os.getenv("VERCEL_ENV", "unknown")
+        'environment': os.getenv("VERCEL_ENV", "unknown"),
+        'version': 'simplified-1.0'
     })
 
 @app.route('/test')
@@ -395,8 +307,8 @@ def test():
     return jsonify({
         'message': 'API服务器正常运行',
         'timestamp': datetime.now().isoformat(),
-        'version': '1.0',
-        'rag_status': 'initialized' if rag else 'not_initialized'
+        'version': 'simplified-1.0',
+        'mode': 'openai_direct'
     })
 
 # Vercel Serverless Function Handler
