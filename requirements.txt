@@ -2,4 +2,8 @@ lightrag
 openai
 numpy
 nest-asyncio
-asyncio 
+asyncio
+flask
+flask-cors
+requests
+python-dotenv 
