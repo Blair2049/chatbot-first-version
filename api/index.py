@@ -13,11 +13,4 @@ sys.path.insert(0, str(project_root))
 from chatbot_web import app
 
 # 设置生产环境
-app.debug = False
-
-# Vercel需要这个变量来识别Flask应用
-handler = app
-
-# 导出Flask应用实例
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8081))) 
+app.debug = False 
